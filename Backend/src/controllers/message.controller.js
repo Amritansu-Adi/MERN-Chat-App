@@ -2,6 +2,8 @@ import Users from "../models/user.model.js";
 import Message from "../models/message.model.js";
 import cloudinary from "../lib/cloudinary.js";
 
+import { getRecieverSocketId, io } from "../lib/socket.js";
+
 export const getUsersForSidebar = async (req, res) => {
     try{
         const loggedInUserId = req.user._id;
@@ -20,11 +22,10 @@ export const getMessages = async (req, res) => {
 
         const messages = await Message.find({
             $or:[                                                           //find all messages where sender and reciever are these two users
-                {senderId:myId, recieverId:userToChatId},
-                {senderId:userToChatId, recieverId:myId}
+                {senderId:myId, receiverId:userToChatId},
+                {senderId:userToChatId, receiverId:myId}
             ]
         })
-
         res.status(200).json(messages);
     }
     catch(error){
@@ -35,8 +36,12 @@ export const getMessages = async (req, res) => {
 export const sendMessage = async (req, res) => {
     try{
         const {text, image} = req.body;
-        const { id:recieverId } = req.params;
+        const { id:receiverId } = req.params;
         const senderId = req.user._id;
+
+        if (!receiverId) {
+            return res.status(400).json({ message: "Receiver ID is required" });
+        }
 
         let imageUrl;
         if(image){
@@ -46,18 +51,29 @@ export const sendMessage = async (req, res) => {
 
         const newMessage = new Message({
             senderId,
-            recieverId,
+            receiverId,
             text,
             image: imageUrl
         });
 
+        const recieverSocketId = getRecieverSocketId(receiverId); // get the socket id of the reciever
+        console.log("Receiver Socket ID:", recieverSocketId); // Debugging line
+
+        if(recieverSocketId){
+            io.to(recieverSocketId).emit("newMessage", {     // emit the message to the reciever only
+                newMessage,
+            });
+        }
+
         await newMessage.save();
 
-        //todo: realtime functionality to emit the message to the reciever
+        //realtime functionality to emit the message to the reciever
+        
 
         res.status(200).json(newMessage);
     }
     catch(error){
+        console.log(error);
         res.status(500).json({message: "Internal server error"});
     }
 };

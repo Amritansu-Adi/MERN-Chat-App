@@ -1,17 +1,16 @@
 import express from 'express';
-import dotenv from 'dotenv';
+import { config } from "dotenv";
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
 import authRoutes from './routes/auth.route.js';
 import messageRoutes from './routes/message.route.js';
 import { connectDB } from './lib/db.js';
+import { io, app, server } from './lib/socket.js';
 
-dotenv.config();
+config();
 
-
-const app = express()
-
+console.log(process.env.MONGO_URI)
 const PORT = process.env.PORT
 
 // Middleware to parse JSON request bodies with increased size limit
@@ -25,9 +24,9 @@ app.use(cors({
 }))
 
 app.use('/api/auth', authRoutes);
-app.use('/api/message', messageRoutes);
+app.use('/api/messages', messageRoutes);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     connectDB()
 })
