@@ -42,3 +42,7 @@ bower_components/
 # Production files
 *.min.js
 *.min.css
+
+# adding gittignore file in ignore list
+# Ignore all files in the .gitignore directory
+.gitignore
